@@ -1,0 +1,142 @@
+---
+title: "STAT 421/621 Spring 2023 - Project 2"
+author: "Felipe Bedoya, Authur Steve Tchoneteck and Arnold Muchatibaya"
+date: "4/21/2023"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+AR-GARCH Modeling
+
+# Background
+
+Financial time series of daily returns may or may not exhibit autocorrelation in the returns themselves, but the variability in the returns as indicated by either the absolute or squared value of the daily returns will exhibit strong autocorrelation. In other words, the volatility or variance of the time series is also important to capture. The GARCH models provide one mechanism to model the volatility of the returns in addition to the returns themselves. 
+
+From an investors perspective, estimates and forecast of the volatility play an important role in pricing models, especially options written on the underlying stocks. 
+
+**DATA:** Use the `quantmod` command `quantmod::getSymbols("^DJI")` to obtain the Dow Jones Index. Note, the end date for the series is dependent on when you download (unless you set the parameters), but simply use what is automatically downloaded. 
+
+**QUESTION 0** Provide a high-level executive summary with at MOST two plots that describes the volatiity patterns observed in the Dow Jones Index, and your ability to forecast the volatility one, two and twenty days ahead (3 distinct time points). 
+
+```{r, message=FALSE, warning=FALSE}
+library(fGarch)
+library(rugarch)
+library(quantmod)
+library(xts)
+library(zoo)
+library(tidyverse)
+library(forecast)
+library(astsa)
+quantmod::getSymbols("^DJI")
+df <- DJI$DJI.Adjusted
+return <- quantmod::dailyReturn(df, type = "log")
+```
+**Answer 0 **
+The volatility patterns observed in the DJI exhibit volatility clustering, that is periods of high volatility is followed by periods of high volatility and periods of low volatility is followed by periods of low volatility.
+
+```{r, echo=FALSE}
+autoplot.zoo(return, main = "Returns of Down Jones Index")
+```
+
+Forecasting one or two days ahead has low volatility especially after observing low volatility previous day. Twenty days ahead forecast has higher volatility because of the uncertainty of which cluster we will be on as shown in the solution to Question 8.
+
+**QUESTION 1** Produce the following plots
+
+    + Plot of adjusted daily closing price
+    + Plot of daily log returns based on the adjusted daily closing price
+    + ACF and PACF of log returns
+    + ACF and PACF of squared log returns
+
+```{r, message=FALSE, warning=FALSE}
+autoplot.zoo(return, main = "Returns of Down Jones Index")
+# Create an ACF plot
+ggAcf(return) +
+  ggtitle("ACF plot of the Returns")
+ggPacf(return)+
+  ggtitle("PACF plot of the Returns")
+ggAcf(return^2) +
+  ggtitle("ACF plot of the Squared Returns")
+ggPacf(return^2)+
+  ggtitle("PACF plot of the Squared Returns")
+
+```
+
+
+**QUESTION 2** Using the **fGarch** package, and the command **garchFit**, fit an ARMA(1,0)+GARCH(1,0) assuming a normal distribution. 
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+return_fit <- fGarch::garchFit(~arma(1,0)
+                               +garch(1,0), cond.dist = "norm",
+                               return)
+summary(return_fit)
+```
+
+
+**QUESTION 3** Repeat question 2 but include a GARCH(2,0) component.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+return_fit2 <- fGarch::garchFit(~arma(1,0)
+                               +garch(2,0), cond.dist = "norm",
+                               return)
+summary(return_fit2)[1]
+```
+
+
+**QUESTION 4** Repeat question 2 but include any other model features you think might be important. You can use your judgement and do not need to go through an extensive model selection process.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+return_fit3 <- fGarch::garchFit(~arma(1,1)
+                               +garch(2,0), cond.dist = "snorm",
+                               return)
+summary(return_fit3)
+```
+
+
+**QUESTION 5** Of your 3 models, choose the one that is the best representation and justify your choice with model diagnostics. Use this model for the remaining questions.
+
+***ANSWER***
+
+The first two models assumed a conditional normal distribution, which did not accurately reflect the usual behavior of returns of financial assets. By changing from normal to skew normal, there was an improvement regarding Information Criterion Statistics. Moreover, the AR(1) coefficient was not statistically different from zero with a 5\% Confidence Level. We fitted and ARMA(1,1) GARCH(2,0) with skew normal conditional distribution, the results is that all coefficients are statistically different than zero and we saw important improvements in information criteria estimators.
+
+**QUESTION 6** Write down the model in final form.
+
+***ANSWER***
+
+\begin{align}
+    \mu_{t} = 9.24*(10^{-6}) + 9.77*(10^{-1})*\mu_{t-1} - 9.95*(10^{-1})*\omega_{t-1} + \sigma_{t}\omega_{t} \\
+    \sigma^{2}_{t} = 4.76*(10^{-5}) + 2.56*(10^{-1})*r^{2}_{t-1} + 4.23*10^{-1}*r^{2}_{t-2}
+\end{align}
+
+**QUESTION 7** Plot the return series with the modeled conditional standard deviations times 2 indicated. This is one of the default plots in fGarch.
+
+```{r, echo = FALSE}
+plot(return_fit3, which =3)
+```
+
+
+
+**QUESTION 8** Produce forecasts for the next 5 days (one trading week) of both the return level and the standard deviation.\
+
+```{r, echo=FALSE}
+
+predict(return_fit3, n.ahead = 5, 
+        plot = TRUE,
+        mse = "cond",
+        conf = 0.95)
+
+```
+
+
+**QUESTION 9** Summarize your findings assuming model is PERFECT. Comment on what the model tells you and the forecasts obtained.
+
+
+**ANSWER**
+
+The model is showing an expected return close to zero, which is usually the case for indices like DJI. It clearly depicts variance clustering. Moreover, since the variance of the last observations is not considerably high, the model predicts low volatility for the upcoming trading days.
+
