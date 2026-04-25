@@ -182,7 +182,7 @@ A clean structure for this repository could be:
 │   ├── fit_skew_normal_model.R
 │   ├── diagnostics.R
 │   └── forecast_5days.R
-├── project_figures/
+├── figures/
 ├── results/
 └── report/
     └── project.pdf
