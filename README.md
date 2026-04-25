@@ -175,14 +175,7 @@ A clean structure for this repository could be:
 .
 ├── README.md
 ├── R/
-│   ├── data_download.R
-│   ├── exploratory_analysis.R
-│   ├── fit_garch_10.R
-│   ├── fit_garch_20.R
-│   ├── fit_skew_normal_model.R
-│   ├── diagnostics.R
-│   └── forecast_5days.R
-├── figures/
+├── project2_figures/
 ├── results/
 └── report/
     └── project.pdf
